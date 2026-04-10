@@ -1,0 +1,7 @@
+float64 target_x
+float64 target_y
+bool random_target
+---
+bool success
+string message
+
