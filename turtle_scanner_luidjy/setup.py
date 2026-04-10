@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'spawn_target_node = turtle_scanner_luidjy.spawn_target:main',
             'turtle_scanner_node = turtle_scanner_luidjy.turtle_scanner_node:main',
+            'mission_client_node = turtle_scanner_luidjy.mission_client:main',
         ],
     },
 )
