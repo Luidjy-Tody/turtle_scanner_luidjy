@@ -5,8 +5,10 @@ import math
 import rclpy
 from rclpy.node import Node
 
+# Messages utilises
 from turtlesim.msg import Pose
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 
 
 class TurtleScannerNode(Node):
@@ -40,14 +42,21 @@ class TurtleScannerNode(Node):
             10
         )
 
-        # Parametres du serpentin donnes dans l'enonce
+        # Partie 4 : publisher pour dire si la cible est detectee ou non
+        self.detected_publisher = self.create_publisher(
+            Bool,
+            "/target_detected",
+            10
+        )
+
+        # Parametres du serpentin
         self.nb_lignes = 5
         self.y_start = 1.0
         self.y_step = 2.0
         self.x_min = 1.0
         self.x_max = 10.0
 
-        # Parametres de vitesse du tableau
+        # Parametres de vitesse
         self.linear_speed = 2.0
         self.angular_speed = 1.5
 
@@ -55,6 +64,13 @@ class TurtleScannerNode(Node):
         self.waypoint_tolerance = 0.3
         self.Kp_ang = 5.0
         self.Kp_lin = 1.0
+
+        # Partie 4 : rayon de detection
+        self.detection_radius = 1.5
+
+        # Etat de detection
+        self.target_detected = False
+        self.detected_message_sent = False
 
         # Waypoints du trajet
         self.waypoints = []
@@ -67,6 +83,9 @@ class TurtleScannerNode(Node):
 
         # Timer ROS2 a 20 Hz
         self.timer = self.create_timer(0.05, self.scan_step)
+
+        # Au debut on publie False
+        self.publish_detected_state(False)
 
         self.get_logger().info("Turtle scanner node started")
         self.get_logger().info(f"Waypoints generated: {self.waypoints}")
@@ -114,11 +133,56 @@ class TurtleScannerNode(Node):
         msg.angular.z = 0.0
         self.cmd_publisher.publish(msg)
 
+    def publish_detected_state(self, state):
+        # Publication sur /target_detected
+        msg = Bool()
+        msg.data = state
+        self.detected_publisher.publish(msg)
+
+    def check_target_detection(self):
+        # Si on n'a pas encore les deux poses on ne peut pas tester
+        if self.pose_scanner is None or self.pose_target is None:
+            return False
+
+        scanner_point = [self.pose_scanner.x, self.pose_scanner.y]
+        target_point = [self.pose_target.x, self.pose_target.y]
+
+        # Distance entre turtle1 et turtle_target
+        distance_target = self.compute_distance(scanner_point, target_point)
+
+        # Si la distance est inferieure au rayon de detection
+        if distance_target < self.detection_radius:
+            self.target_detected = True
+            self.stop_turtle()
+            self.publish_detected_state(True)
+
+            if not self.detected_message_sent:
+                self.get_logger().info(
+                    f"Cible detectee a ({self.pose_target.x:.2f}, {self.pose_target.y:.2f}) !"
+                )
+                self.detected_message_sent = True
+
+            return True
+
+        # Sinon la cible n'est pas encore detectee
+        self.publish_detected_state(False)
+        return False
+
     def scan_step(self):
         # Cette methode est appelee periodiquement par le timer
 
         # Si on ne connait pas encore la position de turtle1
         if self.pose_scanner is None:
+            return
+
+        # Partie 4 : si la cible est deja detectee, on garde la tortue a l'arret
+        if self.target_detected:
+            self.stop_turtle()
+            self.publish_detected_state(True)
+            return
+
+        # Partie 4 : verification de la detection avant de continuer le balayage
+        if self.check_target_detection():
             return
 
         # Si tous les waypoints sont finis

@@ -32,3 +32,21 @@ Ensuite, elle publie une commande sur `/turtle1/cmd_vel` pour se diriger vers ce
 | 20.0 | 5.0 | Trop rapide, rotation excessive, boucle, ne s'arrete plus |
 | 1.0 | 20.0 | Fait des cercles, ne s'arrete plus |
 | 5.0 | 1.0 | Comportement le plus stable, bon resultat |
+
+## Partie 4 - Detection de la tortue cible
+
+Dans cette partie, on a ajoute une logique de detection pendant le balayage.
+
+Le noeud calcule la distance entre :
+- `turtle1`
+- `turtle_target`
+
+Si cette distance devient inferieure a `detection_radius = 1.5`, alors :
+- la tortue s'arrete
+- le topic `/target_detected` publie `True`
+- un message s'affiche dans le terminal avec les coordonnees de la cible
+
+Le test a ete fait avec :
+
+```bash
+ros2 topic echo /target_detected
