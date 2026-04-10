@@ -1,52 +1,107 @@
-# turtle_scanner_luidjy
+# Turtle Scanner - ROS2
 
-## Partie 1 - Spawn d'une cible aleatoire
+## 1. Description du projet
 
-Dans cette partie, on a cree le noeud `spawn_target.py`.
-Ce noeud utilise le service `/spawn` de turtlesim pour faire apparaitre une tortue appelee `turtle_target` a une position aleatoire.
+Ce projet a ete realise avec ROS2 et turtlesim.
 
-### Resultat dans TurtleSim
+L'objectif est de faire parcourir l'espace a une tortue scanner (`turtle1`) selon un trajet en serpentin afin de rechercher une tortue cible (`turtle_target`).
 
-![Spawn target](images/spawn_target.png)
+Le projet utilise :
+- des **topics** (publisher / subscriber)
+- des **services** (client / serveur)
+- une **interface personnalisee** avec `ResetMission.srv`
 
-## Partie 3 - Balayage en serpentin
+---
 
-Dans cette partie, le noeud `turtle_scanner_node.py` genere une liste de waypoints pour faire avancer `turtle1` selon un trajet en serpentin.
+## 2. Architecture du projet
 
-Le deplacement repose sur une regulation proportionnelle :
+Le workspace contient deux packages :
 
-- `Kp_ang` : corrige l'orientation de la tortue
-- `Kp_lin` : corrige l'avance vers le waypoint
+### 2.1 `turtle_scanner_luidjy`
+Package Python principal contenant les noeuds ROS2 :
 
-La tortue calcule :
-- l'angle desire vers le waypoint courant
-- la distance jusqu'au waypoint courant
+- `spawn_target.py`
+- `turtle_scanner_node.py`
+- `mission_client.py`
 
-Ensuite, elle publie une commande sur `/turtle1/cmd_vel` pour se diriger vers ce waypoint.
+### 2.2 `turtle_interfaces`
+Package contenant l'interface de service personnalisee :
 
-### Valeurs testees
+- `ResetMission.srv`
 
-| Kp_ang | Kp_lin | Observation |
-|--------|--------|-------------|
-| 5.0 | 0.8 | Lent, petit temps d'attente au virage, quelques zigzags, mais s'arrete |
-| 20.0 | 5.0 | Trop rapide, rotation excessive, boucle, ne s'arrete plus |
-| 1.0 | 20.0 | Fait des cercles, ne s'arrete plus |
-| 5.0 | 1.0 | Comportement le plus stable, bon resultat |
+---
 
-## Partie 4 - Detection de la tortue cible
+## 3. Role des noeuds
 
-Dans cette partie, on a ajoute une logique de detection pendant le balayage.
+### `spawn_target.py`
+Ce noeud utilise le service `/spawn` de turtlesim pour creer une tortue cible appelee `turtle_target` a une position aleatoire.
 
-Le noeud calcule la distance entre :
-- `turtle1`
-- `turtle_target`
+### `turtle_scanner_node.py`
+C'est le noeud principal du projet.
 
-Si cette distance devient inferieure a `detection_radius = 1.5`, alors :
-- la tortue s'arrete
-- le topic `/target_detected` publie `True`
-- un message s'affiche dans le terminal avec les coordonnees de la cible
+Il permet de :
+- recevoir la pose de `turtle1`
+- recevoir la pose de `turtle_target`
+- generer les waypoints du trajet en serpentin
+- deplacer `turtle1`
+- detecter la cible
+- publier l'etat de detection
+- gerer le service `/reset_mission`
 
-Le test a ete fait avec :
+### `mission_client.py`
+Ce noeud automatise les missions.
 
-```bash
-ros2 topic echo /target_detected
+Il :
+- ecoute `/target_detected`
+- appelle `/reset_mission`
+- lance automatiquement 3 missions successives
+
+---
+
+## 4. Topics utilises
+
+### `/turtle1/pose`
+Type : `turtlesim/msg/Pose`  
+Role : donne la position et l'orientation de `turtle1`
+
+### `/turtle_target/pose`
+Type : `turtlesim/msg/Pose`  
+Role : donne la position et l'orientation de `turtle_target`
+
+### `/turtle1/cmd_vel`
+Type : `geometry_msgs/msg/Twist`  
+Role : permet de commander le mouvement de `turtle1`
+
+### `/target_detected`
+Type : `std_msgs/msg/Bool`  
+Role : publie `True` quand la cible est detectee et `False` sinon
+
+---
+
+## 5. Services utilises
+
+### `/spawn`
+Type : `turtlesim/srv/Spawn`  
+Role : creer une nouvelle tortue dans turtlesim
+
+### `/kill`
+Type : `turtlesim/srv/Kill`  
+Role : supprimer une tortue existante
+
+### `/reset_mission`
+Type : `turtle_interfaces/srv/ResetMission`  
+Role : reinitialiser la mission avec une nouvelle cible
+
+---
+
+## 6. Interface personnalisee
+
+### `ResetMission.srv`
+
+```srv
+float64 target_x
+float64 target_y
+bool random_target
+---
+bool success
+string message
