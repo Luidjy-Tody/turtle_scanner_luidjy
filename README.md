@@ -9,6 +9,23 @@ Ce noeud utilise le service `/spawn` de turtlesim pour faire apparaitre une tort
 
 ![Spawn target](images/spawn_target.png)
 
+## Partie 3 - Balayage en serpentin
+
+Dans cette partie, le noeud `turtle_scanner_node.py` genere une liste de waypoints pour faire avancer `turtle1` selon un trajet en serpentin.
+
+Le deplacement repose sur une regulation proportionnelle :
+
+- `Kp_ang` : corrige l'orientation de la tortue
+- `Kp_lin` : corrige l'avance vers le waypoint
+
+La tortue calcule :
+- l'angle desire vers le waypoint courant
+- la distance jusqu'au waypoint courant
+
+Ensuite, elle publie une commande sur `/turtle1/cmd_vel` pour se diriger vers ce waypoint.
+
+### Valeurs testees
+
 | Kp_ang | Kp_lin | Observation |
 |--------|--------|-------------|
 | 5.0 | 0.8 | Lent, petit temps d'attente au virage, quelques zigzags, mais s'arrete |
